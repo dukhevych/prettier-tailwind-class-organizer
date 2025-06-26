@@ -1,0 +1,43 @@
+{
+  "name": "prettier-tailwind-class-organizer",
+  "version": "1.0.0",
+  "description": "A Prettier plugin that formats Tailwind CSS class attributes by grouping, sorting, and printing them in multiline format.",
+  "type": "module",
+  "main": "plugin.js",
+  "files": [
+    "plugin.js",
+    "formatTailwindClasses.js",
+    "index.js"
+  ],
+  "keywords": [
+    "prettier-plugin",
+    "prettier",
+    "tailwind",
+    "tailwindcss",
+    "css",
+    "formatting"
+  ],
+  "author": "",
+  "license": "MIT",
+  "peerDependencies": {
+    "prettier": ">=3.0.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.0.0",
+    "jest": "^29.0.0"
+  },
+  "scripts": {
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --watch"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/test/**/*.test.js"],
+    "transformIgnorePatterns": [
+      "node_modules/(?!(prettier)/)"
+    ]
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+} 
