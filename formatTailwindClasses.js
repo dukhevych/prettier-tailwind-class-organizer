@@ -1,7 +1,55 @@
 // Predefined group map for Tailwind CSS classes
 export const GROUP_MAP = {
-  layout: ["container", "block", "inline", "flex", "grid", "hidden", "relative", "absolute", "fixed", "sticky", "static"],
-  spacing: ["m-", "p-", "space-", "gap-", "w-", "h-", "min-w-", "min-h-", "max-w-", "max-h-"],
+  layout: [
+    "container",
+    "block",
+    "inline",
+    "flex",
+    "grid",
+    "hidden",
+    "relative",
+    "absolute",
+    "fixed",
+    "sticky",
+    "static",
+    "justify-",
+    "items-",
+    "content-",
+    "self-",
+    "place-",
+    "order-",
+    "col-",
+    "row-"
+  ],
+  spacing: [
+    "m-",
+    "mx-",
+    "my-",
+    "mt-",
+    "mr-",
+    "mb-",
+    "ml-",
+    "p-",
+    "px-",
+    "py-",
+    "pt-",
+    "pr-",
+    "pb-",
+    "pl-",
+    "space-",
+    "gap-",
+    "w-",
+    "h-",
+    "min-w-",
+    "min-h-",
+    "max-w-",
+    "max-h-",
+    "inset-",
+    "top-",
+    "bottom-",
+    "left-",
+    "right-"
+  ],
   typography: ["text-", "font-", "leading-", "tracking-", "align-", "whitespace-", "break-"],
   colors: ["bg-", "text-", "from-", "to-", "border-", "ring-", "fill-", "stroke-"],
   borders: ["border-", "rounded-", "shadow-", "ring-"],
@@ -33,22 +81,19 @@ export function getClassGroup(className) {
 }
 
 /**
- * Groups and sorts Tailwind classes
- * @param {string} classString - The original class string
- * @returns {string} - The formatted class string
+ * Produce grouped & sorted Tailwind class chunks in the configured order.
+ * @param {string} classString
+ * @param {object} options
+ * @returns {string[]} array of grouped class strings
  */
-export function formatTailwindClasses(classString, options = {}) {
-  // Skip if empty or whitespace only
+export function getTailwindClassGroups(classString, options = {}) {
   if (!classString || !classString.trim()) {
-    return classString;
+    return [];
   }
 
-  // Split classes and filter out empty strings
   const classes = classString.trim().split(/\s+/).filter(Boolean);
-  
-  // Group classes by their group
   const groupedClasses = {};
-  
+
   classes.forEach(className => {
     const group = getClassGroup(className);
     if (!groupedClasses[group]) {
@@ -56,27 +101,47 @@ export function formatTailwindClasses(classString, options = {}) {
     }
     groupedClasses[group].push(className);
   });
-  
-  // Sort classes within each group alphabetically
+
   Object.keys(groupedClasses).forEach(group => {
     groupedClasses[group].sort((a, b) => a.localeCompare(b));
   });
-  
-  // Build output: each group on a single line, in order
+
+  const order = resolveGroupOrder(options.tailwindGroupOrder);
   const formattedGroups = [];
-  
-  GROUP_ORDER.forEach(groupName => {
+
+  order.forEach(groupName => {
     if (groupedClasses[groupName] && groupedClasses[groupName].length > 0) {
       formattedGroups.push(groupedClasses[groupName].join(" "));
+      delete groupedClasses[groupName];
     }
   });
-  
-  // Format as multiline string
-  if (options.multiline !== false) {
-    return `\n  ${formattedGroups.join("\n  ")}\n`;
-  } else {
+
+  // Append any custom groups that weren't in the order definition
+  Object.keys(groupedClasses)
+    .sort()
+    .forEach(groupName => {
+      formattedGroups.push(groupedClasses[groupName].join(" "));
+    });
+
+  return formattedGroups;
+}
+
+/**
+ * Groups and sorts Tailwind classes and returns a formatted string.
+ * @param {string} classString - The original class string
+ * @returns {string} - The formatted class string
+ */
+export function formatTailwindClasses(classString, options = {}) {
+  const formattedGroups = getTailwindClassGroups(classString, options);
+  if (!formattedGroups.length) {
+    return classString;
+  }
+
+  if (options.multiline === false) {
     return formattedGroups.join(" ");
   }
+
+  return `\n  ${formattedGroups.join("\n  ")}\n`;
 }
 
 /**
@@ -86,4 +151,30 @@ export function formatTailwindClasses(classString, options = {}) {
  */
 export function isLiteralString(value) {
   return typeof value === 'string' && !value.includes('{') && !value.includes('}');
-} 
+}
+
+function resolveGroupOrder(customOrder) {
+  if (!customOrder) {
+    return GROUP_ORDER;
+  }
+
+  const requested = Array.isArray(customOrder)
+    ? customOrder
+    : String(customOrder)
+        .split(',')
+        .map(segment => segment.trim())
+        .filter(Boolean);
+
+  if (!requested.length) {
+    return GROUP_ORDER;
+  }
+
+  const normalized = [];
+  requested.forEach(groupName => {
+    if (GROUP_MAP[groupName] && !normalized.includes(groupName)) {
+      normalized.push(groupName);
+    }
+  });
+
+  return normalized.concat(GROUP_ORDER.filter(group => !normalized.includes(group)));
+}

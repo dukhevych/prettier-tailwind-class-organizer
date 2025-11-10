@@ -29,6 +29,19 @@ The plugin will automatically format `class` and `className` attributes when you
 npx prettier --write "**/*.{html,js,jsx,vue}"
 ```
 
+If you want to exercise the plugin straight from this repository (without publishing to npm), either:
+
+1. Use `npm link`:
+   - In this repo run `npm link`.
+   - In your project run `npm link prettier-tailwind-class-organizer`.
+   - Add `"plugins": ["prettier-tailwind-class-organizer"]` to your Prettier config.
+2. Or point Prettier at the plugin file directly when formatting:
+   ```bash
+   npx prettier --write "src/**/*.{html,jsx,vue}" --plugin=./path/to/plugin.js
+   ```
+
+Both approaches let you iterate locally before publishing.
+
 ### Input Example
 
 ```html
@@ -111,6 +124,8 @@ The plugin groups Tailwind classes into these predefined categories:
 />
 ```
 
+_Screenshot placeholder: HTML before/after_
+
 ### JSX
 
 ```jsx
@@ -127,6 +142,8 @@ The plugin groups Tailwind classes into these predefined categories:
   "
 />
 ```
+
+_Screenshot placeholder: React/JSX before/after_
 
 ### Vue
 
@@ -148,6 +165,37 @@ The plugin groups Tailwind classes into these predefined categories:
   />
 </template>
 ```
+
+_Screenshot placeholder: Vue before/after_
+
+### Svelte
+
+Install [`prettier-plugin-svelte`](https://github.com/sveltejs/prettier-plugin-svelte) alongside this plugin and include both in your Prettier configuration:
+
+```bash
+npx prettier --plugin=prettier-plugin-svelte --plugin=prettier-tailwind-class-organizer --write "**/*.svelte"
+```
+
+```svelte
+<!-- Input -->
+<div class="p-2 text-white flex bg-blue-500 justify-center">
+  {count}
+</div>
+
+<!-- Output -->
+<div
+  class="
+    flex justify-center
+    p-2
+    text-white
+    bg-blue-500
+  "
+>
+  {count}
+</div>
+```
+
+_Screenshot placeholder: Svelte before/after_
 
 ## What Gets Skipped
 

@@ -3,7 +3,7 @@ import { formatTailwindClasses, isLiteralString, GROUP_MAP, GROUP_ORDER } from '
 describe('formatTailwindClasses', () => {
   test('should group and sort basic classes', () => {
     const input = 'p-2 text-white flex bg-blue-500 justify-center';
-    const expected = '\n  flex\n  p-2\n  text-white\n  bg-blue-500\n  justify-center\n';
+    const expected = '\n  flex justify-center\n  p-2\n  text-white\n  bg-blue-500\n';
     expect(formatTailwindClasses(input)).toBe(expected);
   });
 
@@ -35,6 +35,16 @@ describe('formatTailwindClasses', () => {
     const input = 'p-2 text-white flex';
     const expected = 'flex p-2 text-white';
     expect(formatTailwindClasses(input, { multiline: false })).toBe(expected);
+  });
+
+  test('should respect custom group order option', () => {
+    const input = 'text-white flex bg-blue-500';
+    const expected = '\n  bg-blue-500\n  flex\n  text-white\n';
+    expect(
+      formatTailwindClasses(input, {
+        tailwindGroupOrder: 'colors,layout,typography,spacing'
+      })
+    ).toBe(expected);
   });
 
   test('should handle classes with multiple spaces', () => {

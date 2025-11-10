@@ -1,14 +1,19 @@
+import { createRequire } from 'module';
+import prettier from 'prettier';
 import { formatTailwindClasses, isLiteralString } from '../formatTailwindClasses.js';
 import { formatHtmlWithTailwind } from '../formatHtmlWithTailwind.js';
 import plugin from '../plugin.js';
 
+const require = createRequire(import.meta.url);
+const prettierPluginSvelte = require('prettier-plugin-svelte');
 const { formatHtmlWithTailwind: pluginFormatHtmlWithTailwind } = plugin;
+const resolvedSveltePlugin = prettierPluginSvelte.default ?? prettierPluginSvelte;
 
 describe('Tailwind Group Prettier Plugin', () => {
   describe('formatTailwindClasses', () => {
     test('should group and sort basic classes', () => {
       const input = 'p-2 text-white flex bg-blue-500 justify-center';
-      const expected = '\n  flex\n  p-2\n  text-white\n  bg-blue-500\n  justify-center\n';
+      const expected = '\n  flex justify-center\n  p-2\n  text-white\n  bg-blue-500\n';
       expect(formatTailwindClasses(input)).toBe(expected);
     });
 
@@ -61,7 +66,7 @@ describe('Tailwind Group Prettier Plugin', () => {
   describe('HTML formatting', () => {
     test('should format class attributes in HTML', () => {
       const input = '<div class="p-2 text-white flex bg-blue-500 justify-center" id="main" />';
-      const expected = '<div class="flex\n  p-2\n  text-white\n  bg-blue-500\n  justify-center" id="main" />';
+      const expected = '<div class="flex justify-center\n  p-2\n  text-white\n  bg-blue-500" id="main" />';
       expect(formatHtmlWithTailwind(input)).toBe(expected);
     });
 
@@ -87,7 +92,7 @@ describe('Tailwind Group Prettier Plugin', () => {
   describe('Vue formatting', () => {
     test('should format class attributes in Vue templates', () => {
       const input = '<template><div class="p-2 text-white flex bg-blue-500 justify-center" id="main" /></template>';
-      const expected = '<template><div class="flex\n  p-2\n  text-white\n  bg-blue-500\n  justify-center" id="main" /></template>';
+      const expected = '<template><div class="flex justify-center\n  p-2\n  text-white\n  bg-blue-500" id="main" /></template>';
       expect(formatHtmlWithTailwind(input)).toBe(expected);
     });
 
@@ -141,4 +146,65 @@ describe('Tailwind Group Prettier Plugin', () => {
       expect(formatHtmlWithTailwind(input, { tailwindMultiline: false })).toBe(expected);
     });
   });
-}); 
+
+  describe('Prettier integration', () => {
+    const formatWithPlugin = (source, config = {}) =>
+      prettier.format(source, {
+        parser: 'html',
+        plugins: [plugin],
+        ...config,
+      });
+
+    test('produces multiline grouped classes in HTML output', async () => {
+      const input = '<div class="p-2 text-white flex bg-blue-500 justify-center"></div>';
+      const result = await formatWithPlugin(input);
+      expect(result).toContain(
+        [
+          'class="',
+          '    flex justify-center',
+          '    p-2',
+          '    text-white',
+          '    bg-blue-500',
+          '  "',
+        ].join('\n')
+      );
+    });
+
+    test('respects tailwindMultiline=false during formatting', async () => {
+      const input = '<div class="p-2 text-white flex bg-blue-500 justify-center"></div>';
+      const result = await formatWithPlugin(input, { tailwindMultiline: false });
+      expect(result).toContain('class="flex justify-center p-2 text-white bg-blue-500"');
+      expect(result).toMatch(/class="[^"\n]+"/);
+    });
+  });
+
+  describe('Svelte integration', () => {
+    const formatSvelte = (source, config = {}) =>
+      prettier.format(source, {
+        parser: 'svelte',
+        plugins: [plugin, resolvedSveltePlugin],
+        ...config,
+      });
+
+    test('formats class attributes in Svelte markup', async () => {
+      const input = '<div class="p-2 text-white flex bg-blue-500 justify-center">{count}</div>';
+      const result = await formatSvelte(input);
+      expect(result).toContain(
+        [
+          'class="',
+          '    flex justify-center',
+          '    p-2',
+          '    text-white',
+          '    bg-blue-500',
+          '  "',
+        ].join('\n')
+      );
+    });
+
+    test('respects tailwindMultiline=false for Svelte', async () => {
+      const input = '<div class="p-2 text-white flex bg-blue-500 justify-center">{count}</div>';
+      const result = await formatSvelte(input, { tailwindMultiline: false });
+      expect(result).toContain('class="flex justify-center p-2 text-white bg-blue-500"');
+    });
+  });
+});
