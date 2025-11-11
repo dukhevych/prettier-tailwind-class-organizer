@@ -208,7 +208,7 @@ function transformHtmlAttribute(attr, options) {
     return attr;
   }
   const rawValue = readAttributeValue(attr);
-  if (!isLiteralString(rawValue)) {
+  if (!isPureLiteralClassValue(rawValue)) {
     return attr;
   }
   const groups = getTailwindClassGroups(rawValue, {
@@ -233,21 +233,30 @@ function readAttributeValue(attr) {
     return attr.value.value;
   }
   if (Array.isArray(attr?.value)) {
-    const textParts = attr.value.map(part => {
-      if (typeof part?.data === 'string') {
-        return part.data;
-      }
-      if (typeof part?.raw === 'string') {
-        return part.raw;
-      }
+    const literalParts = [];
+    for (const part of attr.value) {
       if (typeof part === 'string') {
-        return part;
+        literalParts.push(part);
+        continue;
+      }
+      if (part && typeof part === 'object') {
+        // Svelte "Text" nodes expose .data (and .raw) while dynamic bindings have other types.
+        if (typeof part.data === 'string' && (!part.type || part.type === 'Text')) {
+          literalParts.push(part.data);
+          continue;
+        }
+        if (typeof part.raw === 'string' && (!part.type || part.type === 'Text')) {
+          literalParts.push(part.raw);
+          continue;
+        }
+        if (process.env.DEBUG_TAILWIND === 'svelte-attr') {
+          console.log('Non-text attribute part encountered:', part?.type || typeof part);
+        }
+        return null;
       }
       return null;
-    });
-    if (textParts.every(part => typeof part === 'string')) {
-      return textParts.join('');
     }
+    return literalParts.join('');
   }
   return null;
 }
@@ -294,5 +303,9 @@ function isTailwindClassAttribute(attr) {
     return false;
   }
   const value = readAttributeValue(attr);
-  return typeof value === 'string' && value.length > 0;
+  return isPureLiteralClassValue(value);
+}
+
+function isPureLiteralClassValue(value) {
+  return typeof value === 'string' && value.length > 0 && !/[{}]/.test(value);
 }

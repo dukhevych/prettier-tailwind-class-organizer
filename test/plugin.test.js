@@ -206,5 +206,11 @@ describe('Tailwind Group Prettier Plugin', () => {
       const result = await formatSvelte(input, { tailwindMultiline: false });
       expect(result).toContain('class="flex justify-center p-2 text-white bg-blue-500"');
     });
+
+    test('leaves dynamic class expressions untouched', async () => {
+      const input = `<div class="foo {bar ? 'baz' : ''} qux">{count}</div>`;
+      const result = await formatSvelte(input);
+      expect(result).toContain(`class="foo {bar ? 'baz' : ''} qux"`);
+    });
   });
 });
