@@ -17,7 +17,7 @@ try {
 const resolvedSveltePlugin = sveltePlugin?.default && sveltePlugin.default.parsers ? sveltePlugin.default : sveltePlugin;
 const baseSveltePrinter = resolvedSveltePlugin?.printers?.['svelte-ast'] ?? null;
 const tailwindSveltePrinter = baseSveltePrinter
-  ? createTailwindAwarePrinter(baseSveltePrinter, ['attributes'], { prependSpace: true })
+  ? createTailwindAwarePrinter(baseSveltePrinter, ['attributes'])
   : null;
 if (tailwindSveltePrinter && resolvedSveltePlugin?.printers) {
   resolvedSveltePlugin.printers['svelte-ast'] = tailwindSveltePrinter;
@@ -153,7 +153,7 @@ function transformJsxAst(ast, options) {
   return ast;
 }
 
-function createTailwindAwarePrinter(basePrinter, attributeProps, behavior = {}) {
+function createTailwindAwarePrinter(basePrinter, attributeProps) {
   if (!basePrinter) return basePrinter;
   return {
     ...basePrinter,
@@ -168,8 +168,19 @@ function createTailwindAwarePrinter(basePrinter, attributeProps, behavior = {}) 
         if (attributeProps.includes(prop) && Array.isArray(node?.[prop])) {
           docs = docs.map((doc, index) => {
             const attrNode = node[prop][index];
-            const tailwindDoc = buildTailwindAttributeDoc(attrNode, options, behavior);
-            return tailwindDoc || doc;
+            const tailwindDoc = buildTailwindAttributeDoc(attrNode, options);
+            if (!tailwindDoc) {
+              return doc;
+            }
+            const prefixDoc =
+              Array.isArray(doc) &&
+              doc.length > 0 &&
+              typeof doc[0] === 'object' &&
+              doc[0] !== null &&
+              doc[0].type === 'line'
+                ? doc[0]
+                : null;
+            return prefixDoc ? [prefixDoc, tailwindDoc] : tailwindDoc;
           });
         }
         return docs;
@@ -247,7 +258,7 @@ function writeAttributeValue(attr, value) {
   }
 }
 
-function buildTailwindAttributeDoc(attr, options, behavior = {}) {
+function buildTailwindAttributeDoc(attr, options) {
   if (!isTailwindClassAttribute(attr)) {
     return null;
   }
@@ -260,16 +271,22 @@ function buildTailwindAttributeDoc(attr, options, behavior = {}) {
   }
   const attrName = readAttributeName(attr) || 'class';
   if (options.tailwindMultiline === false) {
-    const singleLineDoc = concat([attrName, '="', groups.join(' '), '"']);
-    return behavior.prependSpace ? concat([' ', singleLineDoc]) : singleLineDoc;
+    return concat([attrName, '="', groups.join(' '), '"']);
   }
   const indentFragment = '  ';
   const groupedDoc = join(
     hardline,
     groups.map(group => concat([indentFragment, group]))
   );
-  const multiLineDoc = concat([breakParent, attrName, '="', hardline, groupedDoc, hardline, '"']);
-  return behavior.prependSpace ? concat([' ', multiLineDoc]) : multiLineDoc;
+  return concat([
+    breakParent,
+    attrName,
+    '="',
+    hardline,
+    groupedDoc,
+    hardline,
+    '"',
+  ]);
 }
 
 function isTailwindClassAttribute(attr) {
