@@ -101,6 +101,24 @@ describe('Tailwind Group Prettier Plugin', () => {
       const expected = '<template><div :class="{ active: isActive }" id="main" /></template>';
       expect(formatHtmlWithTailwind(input)).toBe(expected);
     });
+
+    test('reorders literal keys inside simple Vue :class object bindings', async () => {
+      const source = `<template><div :class="{ 'bg-red-500': isDanger, flex: true, 'text-white': hasText }"></div></template>`;
+      const result = await prettier.format(source, {
+        parser: 'vue',
+        plugins: [plugin],
+      });
+      expect(result).toContain(`:class="{ flex: true, 'text-white': hasText, 'bg-red-500': isDanger }"`);
+    });
+
+    test('groups contiguous literal entries inside Vue :class arrays', async () => {
+      const source = `<template><div :class="['bg-red-500', dynamicClass, 'text-white', 'flex']"></div></template>`;
+      const result = await prettier.format(source, {
+        parser: 'vue',
+        plugins: [plugin],
+      });
+      expect(result).toContain(`:class="['bg-red-500', dynamicClass, 'flex', 'text-white']"`);
+    });
   });
 
   describe('Idempotency', () => {
@@ -211,6 +229,12 @@ describe('Tailwind Group Prettier Plugin', () => {
       const input = `<div class="foo {bar ? 'baz' : ''} qux">{count}</div>`;
       const result = await formatSvelte(input);
       expect(result).toContain(`class="foo {bar ? 'baz' : ''} qux"`);
+    });
+
+    test('sorts literal chunks around Svelte mustache bindings', async () => {
+      const input = `<div class="bg-red-500 text-white {dynamicClass} flex p-2">{count}</div>`;
+      const result = await formatSvelte(input);
+      expect(result).toContain(`class="text-white bg-red-500 {dynamicClass} flex p-2"`);
     });
   });
 });

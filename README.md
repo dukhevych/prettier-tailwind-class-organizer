@@ -8,7 +8,7 @@ A Prettier plugin that formats Tailwind CSS class attributes by grouping, sortin
 - ✅ Sorts classes alphabetically within each group
 - ✅ Formats output in multiline format with each group on a new line
 - ✅ Supports HTML, JSX, and Vue templates
-- ✅ Skips dynamic class bindings (e.g., `{dynamicClass}`, `:class="..."`)
+- ✅ Handles simple dynamic class bindings in Vue and Svelte (literal chunks inside `:class` objects/arrays and Svelte `{}` segments), while leaving complex expressions untouched.
 - ✅ Maintains idempotency (multiple runs produce the same result)
 - ✅ Preserves all other attributes and formatting
 - ✅ Configurable options for multiline mode and custom group order
@@ -197,15 +197,47 @@ npx prettier --plugin=prettier-plugin-svelte --plugin=prettier-tailwind-class-or
 
 _Screenshot placeholder: Svelte before/after_
 
+### Dynamic Bindings
+
+The plugin now understands simple literal pieces inside dynamic bindings so you can keep using Vue/Svelte ergonomics without losing Tailwind ordering.
+
+#### Vue
+
+```vue
+<!-- Input -->
+<template>
+  <div :class="{ 'bg-red-500': danger, flex: true, 'text-white': hasText }" />
+</template>
+
+<!-- Output -->
+<template>
+  <div :class="{ flex: true, 'text-white': hasText, 'bg-red-500': danger }" />
+</template>
+```
+
+Literal entries in `:class` arrays are also grouped while keeping dynamic pieces (`baseClass`, ternaries, spreads, etc.) untouched.
+
+#### Svelte
+
+```svelte
+<!-- Input -->
+<div class="bg-red-500 text-white {dynamicClass} flex p-2" />
+
+<!-- Output -->
+<div class="text-white bg-red-500 {dynamicClass} flex p-2" />
+```
+
+Only the literal bits get rearranged—the `{dynamicClass}` placeholder stays where you put it.
+
 ## What Gets Skipped
 
-The plugin intentionally skips dynamic class bindings to avoid breaking functionality:
+Complex bindings that can't be safely analyzed are still left alone:
 
 ```jsx
 // These are NOT formatted:
 <div className={dynamicClass} />
 <div className={`${baseClass} ${conditionalClass}`} />
-<div :class="{ active: isActive }" />
+<div :class="computeClasses(props)" />
 <div class="{foo && 'bar'}" />
 ```
 
